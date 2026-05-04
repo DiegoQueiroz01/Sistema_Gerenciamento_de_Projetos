@@ -26,22 +26,25 @@ public class TarefaService {
     public String cadastrarTarefa(int idProjeto, int limiteTarefasProjeto,
                                   String titulo, String descricao,
                                   String prioridade, long prazo,
-                                  float tempoEstimado) {
-
+                                  float tempoEstimado, int idMembro) {
         if (titulo == null || titulo.trim().isEmpty()) {
             return "Erro: O título da tarefa é obrigatório.";
         }
 
         int ativasProjeto = tarefaDao.contarTarefasAtivasProjeto(idProjeto);
         if (ativasProjeto >= limiteTarefasProjeto) {
-            return "Erro: Projeto atingiu o limite de "
-                    + limiteTarefasProjeto + " tarefas ativas.";
+            return "Erro: Projeto atingiu o limite de " + limiteTarefasProjeto + " tarefas ativas.";
         }
 
-        Tarefa nova = new Tarefa(
-                idProjeto, titulo.trim(), descricao,
-                prioridade, prazo, tempoEstimado
-        );
+        if (idMembro != 0) {
+            int ativasMembro = tarefaDao.contarTarefasAtivasMembro(idMembro);
+            if (ativasMembro >= LIMITE_TAREFAS_MEMBRO) {
+                return "Erro: Membro já possui " + LIMITE_TAREFAS_MEMBRO + " tarefas em andamento.";
+            }
+        }
+
+        Tarefa nova = new Tarefa(idProjeto, titulo.trim(), descricao, prioridade, prazo, tempoEstimado);
+        nova.setIdMembro(idMembro);
         long id = tarefaDao.inserirRetornandoId(nova); // ← retorna o idTarefa gerado
         return "sucesso:" + id;
     }

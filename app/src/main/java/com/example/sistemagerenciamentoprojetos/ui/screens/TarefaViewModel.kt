@@ -43,13 +43,13 @@ class TarefaViewModel(application: Application) : AndroidViewModel(application) 
         descricao: String,
         prioridade: String,
         prazo: Long,
-        tempoEstimado: Float
+        tempoEstimado: Float,
+        idMembro: Int
     ): String {
         return withContext(Dispatchers.IO) {
             tarefaService.cadastrarTarefa(
-                idProjeto, limiteProjeto,
-                titulo, descricao,
-                prioridade, prazo, tempoEstimado
+                idProjeto, limiteProjeto, titulo, descricao,
+                prioridade, prazo, tempoEstimado, idMembro
             )
         }
     }
