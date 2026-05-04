@@ -14,8 +14,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.sistemagerenciamentoprojetos.ui.screens.CadastroMembroScreen
+import com.example.sistemagerenciamentoprojetos.ui.screens.CadastroTarefaScreen
 import com.example.sistemagerenciamentoprojetos.ui.screens.DetalhesMembroScreen
 import com.example.sistemagerenciamentoprojetos.ui.screens.GestaoMembrosScreen
+import com.example.sistemagerenciamentoprojetos.ui.screens.GestaoTarefasScreen
 import com.example.sistemagerenciamentoprojetos.ui.screens.HomeScreen
 import com.example.sistemagerenciamentoprojetos.ui.theme.SistemaGerenciamentoProjetosTheme
 
@@ -40,22 +42,27 @@ fun AppNavigation() {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "home") {
+
         composable("home") {
-            HomeScreen(onNavigateToGestao = {
-                navController.navigate("gestao_membros")
-            })
+            HomeScreen(
+                onNavigateToGestao = { navController.navigate("gestao_membros") },
+                onNavigateToTarefas = { navController.navigate("gestao_tarefas") }
+            )
         }
+
         composable("gestao_membros") {
             GestaoMembrosScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCadastro = { navController.navigate("cadastro_membro") },
-                onNavigateToDetalhes = { id -> navController.navigate("detalhes_membro/$id") }
+                onNavigateToDetalhes = { id ->
+                    navController.navigate("detalhes_membro/$id")
+                }
             )
         }
         composable("cadastro_membro") {
-            CadastroMembroScreen(onNavigateBack = {
-                navController.popBackStack()
-            })
+            CadastroMembroScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(
             route = "detalhes_membro/{membroId}",
@@ -67,5 +74,19 @@ fun AppNavigation() {
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
+
+        composable("gestao_tarefas") {
+            GestaoTarefasScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCadastro = { navController.navigate("cadastro_tarefa") }
+            )
+        }
+        composable("cadastro_tarefa") {
+            CadastroTarefaScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
     }
 }

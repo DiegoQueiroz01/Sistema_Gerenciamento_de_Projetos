@@ -1,4 +1,4 @@
-package com.example.sistemagerenciamentoprojetos.domain.membros.tarefas;
+package com.example.sistemagerenciamentoprojetos.domain.tarefas;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;

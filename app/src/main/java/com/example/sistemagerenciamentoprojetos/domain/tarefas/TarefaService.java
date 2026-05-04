@@ -1,4 +1,4 @@
-package com.example.sistemagerenciamentoprojetos.domain.membros.tarefas;
+package com.example.sistemagerenciamentoprojetos.domain.tarefas;
 
 import android.content.Context;
 
@@ -40,6 +40,10 @@ public class TarefaService {
         );
         tarefaDao.inserir(nova);
         return "Tarefa cadastrada com sucesso!";
+    }
+
+    public void deletarTarefa(int idTarefa) {
+        tarefaDao.deletar(idTarefa);
     }
 
 
