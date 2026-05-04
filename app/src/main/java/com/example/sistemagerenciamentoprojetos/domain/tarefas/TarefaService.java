@@ -19,6 +19,10 @@ public class TarefaService {
         this.tarefaDao = db.tarefaDao();
     }
 
+    /**
+     * Cadastra a tarefa e retorna uma string no formato "sucesso:<id>" ou "Erro: ...".
+     * O id retornado permite que a camada de UI chame atribuirMembro() logo depois.
+     */
     public String cadastrarTarefa(int idProjeto, int limiteTarefasProjeto,
                                   String titulo, String descricao,
                                   String prioridade, long prazo,
@@ -38,8 +42,8 @@ public class TarefaService {
                 idProjeto, titulo.trim(), descricao,
                 prioridade, prazo, tempoEstimado
         );
-        tarefaDao.inserir(nova);
-        return "Tarefa cadastrada com sucesso!";
+        long id = tarefaDao.inserirRetornandoId(nova); // ← retorna o idTarefa gerado
+        return "sucesso:" + id;
     }
 
     public void deletarTarefa(int idTarefa) {

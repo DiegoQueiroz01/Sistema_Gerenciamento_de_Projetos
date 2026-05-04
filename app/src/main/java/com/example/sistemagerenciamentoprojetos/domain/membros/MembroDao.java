@@ -6,6 +6,8 @@ import androidx.room.Query;
 import androidx.room.Update;
 import java.util.List;
 import kotlinx.coroutines.flow.Flow;
+import androidx.room.Query;
+
 
 @Dao
 public interface MembroDao {
@@ -26,4 +28,8 @@ public interface MembroDao {
 
     @Query("SELECT * FROM membros WHERE idMembro = :id")
     Membro buscarPorId(int id);
+
+
+
+
 }

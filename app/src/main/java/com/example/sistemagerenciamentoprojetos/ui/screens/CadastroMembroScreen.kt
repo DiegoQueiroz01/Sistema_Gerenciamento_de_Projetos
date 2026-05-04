@@ -1,5 +1,6 @@
 package com.example.sistemagerenciamentoprojetos.ui.screens
 
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,6 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CadastroMembroScreen(onNavigateBack: () -> Unit) {
@@ -29,6 +33,7 @@ fun CadastroMembroScreen(onNavigateBack: () -> Unit) {
     var cargo by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var mensagem by remember { mutableStateOf("") }
+
 
     Scaffold(
         topBar = {

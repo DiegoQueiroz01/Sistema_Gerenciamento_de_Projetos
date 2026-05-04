@@ -20,6 +20,7 @@ import com.example.sistemagerenciamentoprojetos.ui.screens.GestaoMembrosScreen
 import com.example.sistemagerenciamentoprojetos.ui.screens.GestaoTarefasScreen
 import com.example.sistemagerenciamentoprojetos.ui.screens.HomeScreen
 import com.example.sistemagerenciamentoprojetos.ui.theme.SistemaGerenciamentoProjetosTheme
+import com.example.sistemagerenciamentoprojetos.ui.screens.TaskDetailScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,11 +80,25 @@ fun AppNavigation() {
         composable("gestao_tarefas") {
             GestaoTarefasScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToCadastro = { navController.navigate("cadastro_tarefa") }
+                onNavigateToCadastro = { navController.navigate("cadastro_tarefa") },
+                onNavigateToDetalhe = { id ->           // <-- adicionar isso
+                    navController.navigate("detalhe_tarefa/$id")
+                }
             )
         }
         composable("cadastro_tarefa") {
             CadastroTarefaScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "detalhe_tarefa/{tarefaId}",
+            arguments = listOf(navArgument("tarefaId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val tarefaId = backStackEntry.arguments?.getInt("tarefaId") ?: 0
+            TaskDetailScreen(
+                tarefaId = tarefaId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

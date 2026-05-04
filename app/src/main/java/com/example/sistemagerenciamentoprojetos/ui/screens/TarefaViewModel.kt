@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
+import com.example.sistemagerenciamentoprojetos.domain.membros.Membro
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class TarefaViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -24,6 +26,14 @@ class TarefaViewModel(application: Application) : AndroidViewModel(application) 
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
+        )
+    // Lista reativa de membros para popular o dropdown
+    val membros: StateFlow<List<Membro>> = db.membroDao().listarTodosFlow()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+
         )
 
     suspend fun cadastrar(
@@ -63,5 +73,10 @@ class TarefaViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun ordenar(lista: List<Tarefa>): List<Tarefa> {
         return tarefaService.ordenarTarefas(lista)
+    }
+    suspend fun atribuirMembro(idTarefa: Int, idMembro: Int): String {
+        return withContext(Dispatchers.IO) {
+            tarefaService.atribuirMembro(idTarefa, idMembro)
+        }
     }
 }

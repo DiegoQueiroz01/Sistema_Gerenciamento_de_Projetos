@@ -17,7 +17,9 @@ public class Tarefa {
     private String status;
     private long prazo;
     private float tempoEstimado; //
-    private float tempoEfetivo;  //
+    private float tempoEfetivo;
+
+    //
 
     // Construtor
     public Tarefa(int idProjeto, String titulo, String descricao,

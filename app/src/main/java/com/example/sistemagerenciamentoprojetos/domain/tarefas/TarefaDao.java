@@ -15,6 +15,10 @@ public interface TarefaDao {
     @Insert
     void inserir(Tarefa tarefa);
 
+    // Retorna o rowId gerado pelo Room (equivale ao idTarefa com autoGenerate)
+    @Insert
+    long inserirRetornandoId(Tarefa tarefa);
+
     @Update
     void atualizar(Tarefa tarefa);
 
@@ -38,4 +42,6 @@ public interface TarefaDao {
 
     @Query("DELETE FROM tarefas WHERE idTarefa = :id")
     void deletar(int id);
+
+
 }

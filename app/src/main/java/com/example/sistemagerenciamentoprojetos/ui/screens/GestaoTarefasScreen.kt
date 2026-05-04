@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 fun GestaoTarefasScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCadastro: () -> Unit,
+    onNavigateToDetalhe: (Int) -> Unit,   // <-- adicionar isso
     viewModel: TarefaViewModel = viewModel()
 ) {
     val tarefas by viewModel.tarefas.collectAsState()
@@ -107,7 +108,7 @@ fun GestaoTarefasScreen(
                     items(tarefasOrdenadas) { tarefa ->
                         TarefaCard(
                             tarefa = tarefa,
-                            onClick = {},
+                            onClick = {onNavigateToDetalhe(tarefa.idTarefa)},
                             onDeletar = {
                                 scope.launch {
                                     viewModel.deletar(tarefa.idTarefa)

@@ -19,7 +19,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CadastroTarefaScreen(
@@ -36,6 +43,9 @@ fun CadastroTarefaScreen(
     var prazoTexto by remember { mutableStateOf("Selecionar data") }
     var tempoEstimado by remember { mutableStateOf("") }
     var mensagem by remember { mutableStateOf("") }
+    val membros by viewModel.membros.collectAsStateWithLifecycle()
+    var membroSelecionado by remember { mutableStateOf<com.example.sistemagerenciamentoprojetos.domain.membros.Membro?>(null) }
+    var dropdownExpandido by remember { mutableStateOf(false) }
 
     val calendar = Calendar.getInstance()
     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -161,6 +171,77 @@ fun CadastroTarefaScreen(
                     )
                 }
             }
+            Text(
+                "RESPONSÁVEL",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray
+            )
+
+            if (membros.isEmpty()) {
+                // Aviso quando não há membros cadastrados
+                Text(
+                    "⚠ Nenhum membro cadastrado. Cadastre um membro primeiro.",
+                    color = Color(0xFFB26A00),
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 16.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 16.dp)
+                ) {
+                    TextField(
+                        value = membroSelecionado?.nome ?: "Selecionar responsável",
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { dropdownExpandido = true },
+                        enabled = false,
+                        textStyle = TextStyle(
+                            color = if (membroSelecionado != null) Color.Black else Color.Gray
+                        ),
+                        trailingIcon = {
+                            Icon(
+                                if (dropdownExpandido) Icons.Default.KeyboardArrowUp
+                                else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.clickable { dropdownExpandido = !dropdownExpandido }
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            disabledContainerColor = Color(0xFFF5F5F5),
+                            disabledTextColor = if (membroSelecionado != null) Color.Black else Color.Gray,
+                            disabledIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    DropdownMenu(
+                        expanded = dropdownExpandido,
+                        onDismissRequest = { dropdownExpandido = false }
+                    ) {
+                        membros.forEach { membro ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(membro.nome, fontWeight = FontWeight.Medium)
+                                        Text(membro.cargo, fontSize = 11.sp, color = Color.Gray)
+                                    }
+                                },
+                                onClick = {
+                                    membroSelecionado = membro
+                                    dropdownExpandido = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
 
             Text(
                 "PRAZO *",
@@ -232,12 +313,26 @@ fun CadastroTarefaScreen(
                             prazo = prazoMillis,
                             tempoEstimado = tempo
                         )
-                        mensagem = resultado
-                        if (resultado.contains("sucesso")) {
+                        // resultado agora vem como "sucesso:<id>" ou "Erro: ..."
+                        if (resultado.startsWith("sucesso:")) {
+                            val idTarefa = resultado.removePrefix("sucesso:").toIntOrNull() ?: 0
+                            // Atribui o responsável selecionado à tarefa recém-criada
+                            if (idTarefa > 0 && membroSelecionado != null) {
+                                val resultadoAtribuicao = viewModel.atribuirMembro(idTarefa, membroSelecionado!!.idMembro)
+                                mensagem = if (resultadoAtribuicao.contains("sucesso", ignoreCase = true))
+                                    "Tarefa cadastrada com sucesso!"
+                                else
+                                    "Tarefa criada, mas: $resultadoAtribuicao"
+                            } else {
+                                mensagem = "Tarefa cadastrada com sucesso!"
+                            }
                             titulo = ""
                             descricao = ""
                             tempoEstimado = ""
                             prazoTexto = "Selecionar data"
+                            membroSelecionado = null
+                        } else {
+                            mensagem = resultado
                         }
                     }
                 },
