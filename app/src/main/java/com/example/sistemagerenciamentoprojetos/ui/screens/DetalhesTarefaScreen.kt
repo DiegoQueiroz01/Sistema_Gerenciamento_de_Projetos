@@ -249,9 +249,11 @@ fun TaskDetailScreen(
                                     shape = RoundedCornerShape(20.dp),
                                     color = Color(0xFFFFF0E0)
                                 ) {
-                                    val tarefasAtivasMembro = todasTarefas.contarComListaDinamica {
-                                        it.idMembro == membro!!.idMembro && it.status == "Em_Andamento"
-                                    }
+                                    val tarefasAtivasMembro = tarefaViewModel.contarDoMembroPorStatus(
+                                        todasTarefas,
+                                        membro!!.idMembro,
+                                        "Em_Andamento"
+                                    )
                                     Text(
                                         text = "$tarefasAtivasMembro / 3",
                                         color = Color(0xFFF57C00),

@@ -89,10 +89,10 @@ fun DetalhesProjetoScreen(
         }
     ) { paddingValues ->
         projeto?.let { p ->
-            val ativas = tarefas.contarComListaDinamica { it.status != "Concluida" }
-            val concluidas = tarefas.contarComListaDinamica { it.status == "Concluida" }
-            val emAndamento = tarefas.contarComListaDinamica { it.status == "Em_Andamento" }
-            val atrasadas = tarefas.contarComListaDinamica { it.status != "Concluida" && it.prazo < System.currentTimeMillis() }
+            val ativas = tarefaViewModel.contarAtivas(tarefas)
+            val concluidas = tarefaViewModel.contarPorStatus(tarefas, "Concluida")
+            val emAndamento = tarefaViewModel.contarPorStatus(tarefas, "Em_Andamento")
+            val atrasadas = tarefaViewModel.contarAtrasadas(tarefas, System.currentTimeMillis())
             val progresso = if (tarefas.isEmpty()) 0f else (concluidas.toFloat() / tarefas.size).coerceIn(0f, 1f)
 
             Column(
@@ -147,11 +147,12 @@ fun DetalhesProjetoScreen(
 
                 Box(modifier = Modifier.weight(1f)) {
                     when (abaSelecionada) {
-                        0 -> ProjetoTarefasTab(tarefasOrdenadas, dateFormat)
+                        0 -> ProjetoTarefasTab(tarefasOrdenadas, dateFormat, tarefaViewModel)
                         1 -> ProjetoEquipeTab(
                             membros = membros,
                             membrosDisponiveis = membrosDisponiveis,
                             tarefas = tarefas,
+                            tarefaViewModel = tarefaViewModel,
                             mensagem = mensagem,
                             onVincular = { idMembro ->
                                 scope.launch {
@@ -184,7 +185,11 @@ fun DetalhesProjetoScreen(
 }
 
 @Composable
-private fun ProjetoTarefasTab(tarefas: List<Tarefa>, dateFormat: SimpleDateFormat) {
+private fun ProjetoTarefasTab(
+    tarefas: List<Tarefa>,
+    dateFormat: SimpleDateFormat,
+    tarefaViewModel: TarefaViewModel
+) {
     if (tarefas.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Nenhuma tarefa cadastrada para este projeto.", color = Color.Gray)
@@ -198,7 +203,7 @@ private fun ProjetoTarefasTab(tarefas: List<Tarefa>, dateFormat: SimpleDateForma
         contentPadding = PaddingValues(16.dp)
     ) {
         listOf("Alta", "Media", "Baixa").forEach { prioridade ->
-            val tarefasPrioridade = tarefas.filtrarComListaDinamica { it.prioridade == prioridade }
+            val tarefasPrioridade = tarefaViewModel.filtrarPorPrioridade(tarefas, prioridade)
             if (tarefasPrioridade.isNotEmpty()) {
                 item {
                     Text(
@@ -222,6 +227,7 @@ private fun ProjetoEquipeTab(
     membros: List<Membro>,
     membrosDisponiveis: List<Membro>,
     tarefas: List<Tarefa>,
+    tarefaViewModel: TarefaViewModel,
     mensagem: String,
     onVincular: (Int) -> Unit,
     onDesvincular: (Int) -> Unit
@@ -292,9 +298,8 @@ private fun ProjetoEquipeTab(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp)
             ) {
                 items(membros) { membro ->
-                    val tarefasMembro = tarefas.filtrarComListaDinamica { it.idMembro == membro.idMembro }
-                    val ativas = tarefasMembro.contarComListaDinamica { it.status == "Em_Andamento" }
-                    val concluidas = tarefasMembro.contarComListaDinamica { it.status == "Concluida" }
+                    val ativas = tarefaViewModel.contarDoMembroPorStatus(tarefas, membro.idMembro, "Em_Andamento")
+                    val concluidas = tarefaViewModel.contarDoMembroPorStatus(tarefas, membro.idMembro, "Concluida")
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),

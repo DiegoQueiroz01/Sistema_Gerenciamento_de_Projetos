@@ -76,10 +76,10 @@ fun DetalhesMembroScreen(
         }
     ) { paddingValues ->
         membro?.let { m ->
-            val tarefasAtivas = tarefas.contarComListaDinamica { it.status == "Em_Andamento" }
-            val tarefasConcluidas = tarefas.contarComListaDinamica { it.status == "Concluida" }
-            val tarefasPendentes = tarefas.filtrarComListaDinamica { it.status != "Concluida" }
-            val historico = tarefas.filtrarComListaDinamica { it.status == "Concluida" }
+            val tarefasAtivas = tarefaViewModel.contarPorStatus(tarefas, "Em_Andamento")
+            val tarefasConcluidas = tarefaViewModel.contarPorStatus(tarefas, "Concluida")
+            val tarefasPendentes = tarefaViewModel.listarPendentes(tarefas)
+            val historico = tarefaViewModel.filtrarPorStatus(tarefas, "Concluida")
 
             Column(
                 modifier = Modifier

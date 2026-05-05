@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.sistemagerenciamentoprojetos.domain.membros.AppDatabase
 import com.example.sistemagerenciamentoprojetos.domain.tarefas.Tarefa
 import com.example.sistemagerenciamentoprojetos.domain.tarefas.TarefaService
+import com.example.sistemagerenciamentoprojetos.domain.projetos.Projeto
+import com.example.sistemagerenciamentoprojetos.domain.servicos.GerenciadorTarefas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +22,7 @@ class TarefaViewModel(application: Application) : AndroidViewModel(application) 
     private val db = AppDatabase.getInstance(application)
     private val tarefaDao = db.tarefaDao()
     private val tarefaService = TarefaService(application)
+    private val gerenciadorTarefas = GerenciadorTarefas()
 
     val tarefas: StateFlow<List<Tarefa>> = tarefaDao.listarTodas()
         .stateIn(
@@ -97,6 +100,68 @@ class TarefaViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun ordenar(lista: List<Tarefa>): List<Tarefa> {
         return tarefaService.ordenarTarefas(lista)
+    }
+
+    fun filtrarGestao(
+        tarefas: List<Tarefa>,
+        projetos: List<Projeto>,
+        membros: List<Membro>,
+        pesquisa: String,
+        prioridade: String,
+        status: String,
+        idProjeto: Int,
+        idMembro: Int,
+        ordenacao: String,
+        agora: Long
+    ): List<Tarefa> {
+        val filtradas = gerenciadorTarefas.filtrarTarefasGestao(
+            tarefas, projetos, membros, pesquisa, prioridade, status, idProjeto, idMembro, agora
+        )
+        return gerenciadorTarefas.ordenarTarefasParaGestao(filtradas, projetos, membros, ordenacao)
+    }
+
+    fun listarPendentes(tarefas: List<Tarefa>): List<Tarefa> {
+        return gerenciadorTarefas.listarTarefasPendentes(tarefas)
+    }
+
+    fun listarAtrasadas(tarefas: List<Tarefa>, agora: Long): List<Tarefa> {
+        return gerenciadorTarefas.listarTarefasAtrasadas(tarefas, agora)
+    }
+
+    fun filtrarPorPrioridade(tarefas: List<Tarefa>, prioridade: String): List<Tarefa> {
+        return gerenciadorTarefas.filtrarTarefasPorPrioridade(tarefas, prioridade)
+    }
+
+    fun filtrarPorStatus(tarefas: List<Tarefa>, status: String): List<Tarefa> {
+        return gerenciadorTarefas.filtrarTarefasPorStatus(tarefas, status)
+    }
+
+    fun filtrarPorProjeto(tarefas: List<Tarefa>, idProjeto: Int): List<Tarefa> {
+        return gerenciadorTarefas.filtrarTarefasPorProjeto(tarefas, idProjeto)
+    }
+
+    fun filtrarPorMembro(tarefas: List<Tarefa>, idMembro: Int): List<Tarefa> {
+        return gerenciadorTarefas.filtrarTarefasPorMembro(tarefas, idMembro)
+    }
+
+    fun contarPorStatus(tarefas: List<Tarefa>, status: String): Int {
+        return gerenciadorTarefas.contarTarefasPorStatus(tarefas, status)
+    }
+
+    fun contarAtivas(tarefas: List<Tarefa>): Int {
+        return gerenciadorTarefas.contarTarefasAtivas(tarefas)
+    }
+
+    fun contarAtrasadas(tarefas: List<Tarefa>, agora: Long): Int {
+        return gerenciadorTarefas.contarTarefasAtrasadas(tarefas, agora)
+    }
+
+    fun contarConcluidasNoPrazo(tarefas: List<Tarefa>, agora: Long): Int {
+        return gerenciadorTarefas.contarTarefasConcluidasNoPrazo(tarefas, agora)
+    }
+
+    fun contarDoMembroPorStatus(tarefas: List<Tarefa>, idMembro: Int, status: String): Int {
+        return gerenciadorTarefas.contarTarefasDoMembroPorStatus(tarefas, idMembro, status)
     }
     fun tarefasDoProjeto(idProjeto: Int): Flow<List<Tarefa>> {
         return tarefaDao.listarPorProjeto(idProjeto)

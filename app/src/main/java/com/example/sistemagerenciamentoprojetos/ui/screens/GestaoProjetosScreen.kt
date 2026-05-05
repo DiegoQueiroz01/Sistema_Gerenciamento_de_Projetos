@@ -42,26 +42,8 @@ fun GestaoProjetosScreen(
     val projetos by viewModel.projetosResumo.collectAsState()
     var pesquisa by remember { mutableStateOf("") }
     var filtroSituacao by remember { mutableStateOf("Todos") }
-    val termoBusca = pesquisa.normalizarBusca()
 
-    val projetosOrdenados = viewModel.ordenarPorPrioridade(projetos)
-        .filtrarComListaDinamica { projeto ->
-            val concluido = projeto.totalTarefas > 0 && projeto.tarefasConcluidas == projeto.totalTarefas
-            val limiteCheio = projeto.limiteTarefas > 0 && projeto.tarefasAtivas >= projeto.limiteTarefas
-            val passaBusca = termoBusca.isBlank() ||
-                    projeto.idProjeto.toString().contains(termoBusca) ||
-                    projeto.nome.orEmpty().normalizarBusca().contains(termoBusca) ||
-                    projeto.descricao.orEmpty().normalizarBusca().contains(termoBusca)
-            val passaSituacao = when (filtroSituacao) {
-                "Atrasados" -> projeto.tarefasAtrasadas > 0
-                "No limite" -> limiteCheio
-                "Em andamento" -> projeto.tarefasEmAndamento > 0
-                "Concluídos" -> concluido
-                else -> true
-            }
-
-            passaBusca && passaSituacao
-        }
+    val projetosOrdenados = viewModel.filtrarProjetos(projetos, pesquisa, filtroSituacao)
 
     Scaffold(
         topBar = {

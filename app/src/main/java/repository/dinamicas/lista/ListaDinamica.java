@@ -5,6 +5,14 @@ import java.util.NoSuchElementException;
 import repository.Listavel;
 import repository.dinamicas.NoDuplo;
 
+/**
+ * Implementacao de lista dinamica duplamente encadeada.
+ *
+ * <p>Esta estrutura e usada no aplicativo para manipular colecoes em memoria
+ * durante filtragens, contagens, selecoes e ordenacoes. O banco Room persiste
+ * os dados, enquanto esta lista representa a estrutura de dados trabalhada
+ * pela regra de negocio.</p>
+ */
 public class ListaDinamica implements Listavel {
     private NoDuplo ponteiroInicio;
     private NoDuplo ponteiroFim;
@@ -25,6 +33,10 @@ public class ListaDinamica implements Listavel {
         this(10);
     }
 
+    /**
+     * Insere um objeto em uma posicao valida, ajustando os ponteiros anterior
+     * e proximo dos nos vizinhos.
+     */
     @Override
     public void inserir(Object objeto, int posicao) {
         if (estaCheia() || posicao < 0 || posicao > quantidade) {

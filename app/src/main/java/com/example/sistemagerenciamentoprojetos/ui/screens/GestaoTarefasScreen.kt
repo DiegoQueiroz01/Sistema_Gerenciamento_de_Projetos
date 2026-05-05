@@ -46,35 +46,18 @@ fun GestaoTarefasScreen(
     fun nomeProjeto(id: Int): String = projetos.firstOrNull { it.idProjeto == id }?.nome ?: "Projeto $id"
     fun nomeMembro(id: Int): String = membros.firstOrNull { it.idMembro == id }?.nome ?: ""
 
-    val tarefasFiltradas = tarefas
-        .filtrarComListaDinamica { tarefa ->
-            pesquisa.isBlank() ||
-                    tarefa.idTarefa.toString().contains(pesquisa) ||
-                    tarefa.titulo.contains(pesquisa, ignoreCase = true) ||
-                    tarefa.descricao.contains(pesquisa, ignoreCase = true) ||
-                    nomeProjeto(tarefa.idProjeto).contains(pesquisa, ignoreCase = true) ||
-                    nomeMembro(tarefa.idMembro).contains(pesquisa, ignoreCase = true)
-        }
-        .filtrarComListaDinamica { filtroPrioridade == "Todas" || it.prioridade == filtroPrioridade }
-        .filtrarComListaDinamica {
-            when (filtroStatus) {
-                "Não iniciada" -> it.status == "Nao_Iniciada"
-                "Em andamento" -> it.status == "Em_Andamento"
-                "Concluída" -> it.status == "Concluida"
-                "Atrasadas" -> it.status != "Concluida" && it.prazo < agora
-                else -> true
-            }
-        }
-        .filtrarComListaDinamica { filtroProjetoId == 0 || it.idProjeto == filtroProjetoId }
-        .filtrarComListaDinamica { filtroMembroId == 0 || it.idMembro == filtroMembroId }
-        .let { lista ->
-            when (ordenacao) {
-                "Prioridade" -> viewModel.ordenar(lista)
-                "Projeto" -> lista.sortedWith(compareBy({ nomeProjeto(it.idProjeto) }, { it.prazo }))
-                "Responsável" -> lista.sortedWith(compareBy({ nomeMembro(it.idMembro) }, { it.prazo }))
-                else -> lista.sortedBy { it.prazo }
-            }
-        }
+    val tarefasFiltradas = viewModel.filtrarGestao(
+        tarefas = tarefas,
+        projetos = projetos,
+        membros = membros,
+        pesquisa = pesquisa,
+        prioridade = filtroPrioridade,
+        status = filtroStatus,
+        idProjeto = filtroProjetoId,
+        idMembro = filtroMembroId,
+        ordenacao = ordenacao,
+        agora = agora
+    )
 
     Scaffold(
         topBar = {

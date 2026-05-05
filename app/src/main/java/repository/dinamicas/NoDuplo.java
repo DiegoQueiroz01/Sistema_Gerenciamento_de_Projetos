@@ -1,5 +1,11 @@
 package repository.dinamicas;
 
+/**
+ * No de uma lista duplamente encadeada.
+ *
+ * <p>Cada no guarda o dado e tambem referencias para o no anterior
+ * e para o proximo no, permitindo percorrer a estrutura nos dois sentidos.</p>
+ */
 public class NoDuplo {
     private NoDuplo anterior;
     private Object dado;

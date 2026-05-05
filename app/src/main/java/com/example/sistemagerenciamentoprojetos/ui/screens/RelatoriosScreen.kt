@@ -32,15 +32,15 @@ fun RelatoriosScreen(
     var projetoFiltroId by remember { mutableStateOf(0) }
     var expandirProjeto by remember { mutableStateOf(false) }
 
-    val tarefasFiltradas = tarefas.filtrarComListaDinamica { projetoFiltroId == 0 || it.idProjeto == projetoFiltroId }
+    val tarefasFiltradas = tarefaViewModel.filtrarPorProjeto(tarefas, projetoFiltroId)
     val agora = System.currentTimeMillis()
-    val pendentes = tarefasFiltradas.contarComListaDinamica { it.status == "Nao_Iniciada" }
-    val andamento = tarefasFiltradas.contarComListaDinamica { it.status == "Em_Andamento" }
-    val concluidas = tarefasFiltradas.contarComListaDinamica { it.status == "Concluida" }
-    val atrasadas = tarefasFiltradas.contarComListaDinamica { it.status != "Concluida" && it.prazo < agora }
+    val pendentes = tarefaViewModel.contarPorStatus(tarefasFiltradas, "Nao_Iniciada")
+    val andamento = tarefaViewModel.contarPorStatus(tarefasFiltradas, "Em_Andamento")
+    val concluidas = tarefaViewModel.contarPorStatus(tarefasFiltradas, "Concluida")
+    val atrasadas = tarefaViewModel.contarAtrasadas(tarefasFiltradas, agora)
     val total = tarefasFiltradas.size
     val taxaConclusao = if (total == 0) 0f else concluidas.toFloat() / total
-    val tarefasNoPrazo = tarefasFiltradas.contarComListaDinamica { it.status == "Concluida" && it.prazo >= agora }
+    val tarefasNoPrazo = tarefaViewModel.contarConcluidasNoPrazo(tarefasFiltradas, agora)
     val taxaNoPrazo = if (concluidas == 0) 0f else tarefasNoPrazo.toFloat() / concluidas
     val tempoEstimado = tarefasFiltradas.sumOf { it.tempoEstimado.toDouble() }.toFloat()
     val tempoEfetivo = tarefasFiltradas.sumOf { it.tempoEfetivo.toDouble() }.toFloat()
@@ -153,8 +153,8 @@ fun RelatoriosScreen(
             }
 
             items(membros) { membro ->
-                val tarefasMembro = tarefasFiltradas.filtrarComListaDinamica { it.idMembro == membro.idMembro }
-                val concluidasMembro = tarefasMembro.contarComListaDinamica { it.status == "Concluida" }
+                val tarefasMembro = tarefaViewModel.filtrarPorMembro(tarefasFiltradas, membro.idMembro)
+                val concluidasMembro = tarefaViewModel.contarPorStatus(tarefasMembro, "Concluida")
                 val progresso = if (tarefasMembro.isEmpty()) 0f else concluidasMembro.toFloat() / tarefasMembro.size
                 MembroReportCard(
                     nome = membro.nome,

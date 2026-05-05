@@ -3,24 +3,22 @@ package com.example.sistemagerenciamentoprojetos.domain.projetos;
 import android.content.Context;
 
 import com.example.sistemagerenciamentoprojetos.domain.membros.AppDatabase;
+import com.example.sistemagerenciamentoprojetos.domain.servicos.GerenciadorProjetos;
 import com.example.sistemagerenciamentoprojetos.domain.tarefas.TarefaDao;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.PriorityQueue;
-
-import repository.dinamicas.lista.ListaDinamica;
 
 public class ProjetoService {
 
     private final ProjetoDao projetoDao;
     private final TarefaDao tarefaDao;
+    private final GerenciadorProjetos gerenciadorProjetos;
 
     public ProjetoService(Context context) {
         AppDatabase db = AppDatabase.getInstance(context);
         this.projetoDao = db.projetoDao();
         this.tarefaDao = db.tarefaDao();
+        this.gerenciadorProjetos = new GerenciadorProjetos();
     }
 
     public String cadastrarProjeto(String nome, String descricao, long dataInicio,
@@ -127,41 +125,6 @@ public class ProjetoService {
     }
 
     public List<ProjetoResumo> ordenarProjetosPorPrioridade(List<ProjetoResumo> projetos) {
-        ListaDinamica projetosDinamicos = new ListaDinamica(projetos.size() > 0 ? projetos.size() : 1);
-        for (ProjetoResumo projeto : projetos) {
-            projetosDinamicos.anexar(projeto);
-        }
-
-        PriorityQueue<ProjetoResumo> fila = new PriorityQueue<>(
-                projetosDinamicos.tamanho() > 0 ? projetosDinamicos.tamanho() : 1,
-                Comparator
-                        .comparingInt((ProjetoResumo p) -> getRiscoProjeto(p))
-                        .thenComparingLong(p -> p.dataFim)
-                        .thenComparing(p -> p.nome)
-        );
-
-        for (int i = 0; i < projetosDinamicos.tamanho(); i++) {
-            ProjetoResumo projeto = (ProjetoResumo) projetosDinamicos.selecionar(i);
-            fila.add(projeto);
-        }
-
-        ListaDinamica ordenados = new ListaDinamica(projetosDinamicos.tamanho() > 0 ? projetosDinamicos.tamanho() : 1);
-        while (!fila.isEmpty()) {
-            ordenados.anexar(fila.poll());
-        }
-
-        List<ProjetoResumo> retorno = new ArrayList<>();
-        for (int i = 0; i < ordenados.tamanho(); i++) {
-            retorno.add((ProjetoResumo) ordenados.selecionar(i));
-        }
-
-        return retorno;
-    }
-
-    private int getRiscoProjeto(ProjetoResumo projeto) {
-        if (projeto.tarefasAtrasadas > 0) return 1;
-        if (projeto.limiteTarefas > 0 && projeto.tarefasAtivas >= projeto.limiteTarefas) return 2;
-        if (projeto.limiteTarefas > 0 && projeto.tarefasAtivas >= projeto.limiteTarefas * 0.8f) return 3;
-        return 4;
+        return gerenciadorProjetos.ordenarProjetosPorPrioridade(projetos);
     }
 }

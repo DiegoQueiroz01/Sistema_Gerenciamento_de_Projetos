@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sistemagerenciamentoprojetos.domain.membros.AppDatabase
 import com.example.sistemagerenciamentoprojetos.domain.membros.Membro
+import com.example.sistemagerenciamentoprojetos.domain.servicos.GerenciadorMembros
+import com.example.sistemagerenciamentoprojetos.domain.tarefas.Tarefa
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.withContext
 class MembrosViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getInstance(application)
     private val membroDao = db.membroDao()
+    private val gerenciadorMembros = GerenciadorMembros()
 
     val membros: StateFlow<List<Membro>> = membroDao.listarTodosFlow()
         .stateIn(
@@ -55,5 +58,23 @@ class MembrosViewModel(application: Application) : AndroidViewModel(application)
             db.projetoDao().desvincularMembroDeTodosProjetos(idMembro)
             membroDao.deletar(idMembro)
         }
+    }
+
+    fun filtrarMembros(
+        membros: List<Membro>,
+        tarefas: List<Tarefa>,
+        pesquisa: String,
+        cargo: String,
+        carga: String
+    ): List<Membro> {
+        return gerenciadorMembros.filtrarMembros(membros, tarefas, pesquisa, cargo, carga)
+    }
+
+    fun listarCargos(membros: List<Membro>): List<String> {
+        return gerenciadorMembros.listarCargos(membros)
+    }
+
+    fun contarTarefasEmAndamento(tarefas: List<Tarefa>, idMembro: Int): Int {
+        return gerenciadorMembros.contarTarefasEmAndamentoDoMembro(tarefas, idMembro)
     }
 }

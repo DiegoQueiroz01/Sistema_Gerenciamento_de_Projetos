@@ -8,6 +8,7 @@ import com.example.sistemagerenciamentoprojetos.domain.membros.Membro
 import com.example.sistemagerenciamentoprojetos.domain.projetos.Projeto
 import com.example.sistemagerenciamentoprojetos.domain.projetos.ProjetoResumo
 import com.example.sistemagerenciamentoprojetos.domain.projetos.ProjetoService
+import com.example.sistemagerenciamentoprojetos.domain.servicos.GerenciadorProjetos
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +20,7 @@ class ProjetosViewModel(application: Application) : AndroidViewModel(application
     private val db = AppDatabase.getInstance(application)
     private val projetoDao = db.projetoDao()
     private val projetoService = ProjetoService(application)
+    private val gerenciadorProjetos = GerenciadorProjetos()
 
     val projetos: StateFlow<List<Projeto>> = projetoDao.listarTodosFlow()
         .stateIn(
@@ -54,6 +56,10 @@ class ProjetosViewModel(application: Application) : AndroidViewModel(application
 
     fun ordenarPorPrioridade(lista: List<ProjetoResumo>): List<ProjetoResumo> {
         return projetoService.ordenarProjetosPorPrioridade(lista)
+    }
+
+    fun filtrarProjetos(lista: List<ProjetoResumo>, pesquisa: String, situacao: String): List<ProjetoResumo> {
+        return gerenciadorProjetos.filtrarProjetos(lista, pesquisa, situacao)
     }
 
     fun membrosDoProjeto(idProjeto: Int): Flow<List<Membro>> {

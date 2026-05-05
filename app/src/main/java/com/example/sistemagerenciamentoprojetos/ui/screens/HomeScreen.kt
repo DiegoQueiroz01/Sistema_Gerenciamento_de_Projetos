@@ -48,10 +48,10 @@ fun HomeScreen(
 
     val hoje = System.currentTimeMillis()
     val tarefasOrdenadas = tarefaViewModel.ordenar(tarefas)
-    val tarefasPendentes = tarefas.filtrarComListaDinamica { it.status != "Concluida" }
-    val tarefasAtrasadas = tarefasPendentes.filtrarComListaDinamica { it.prazo < hoje }
+    val tarefasPendentes = tarefaViewModel.listarPendentes(tarefas)
+    val tarefasAtrasadas = tarefaViewModel.listarAtrasadas(tarefasPendentes, hoje)
     val tarefasDoDia = tarefasOrdenadas
-        .filtrarComListaDinamica { it.status != "Concluida" }
+        .let { tarefaViewModel.listarPendentes(it) }
         .take(2)
     val projetosOrdenados = projetosViewModel.ordenarPorPrioridade(projetos)
     val projetoContinuar = projetosOrdenados.firstOrNull()

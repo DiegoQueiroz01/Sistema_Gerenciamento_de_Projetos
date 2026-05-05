@@ -41,36 +41,13 @@ fun GestaoMembrosScreen(
     var pesquisa by remember { mutableStateOf("") }
     var filtroCargo by remember { mutableStateOf("Todos") }
     var filtroCarga by remember { mutableStateOf("Todos") }
-    val termoBusca = pesquisa.normalizarBusca()
-    val cargos = listOf("Todos") + membros
-        .map { it.cargo.orEmpty() }
-        .filtrarComListaDinamica { it.isNotBlank() }
-        .distinct()
-        .sortedBy { it.normalizarBusca() }
+    val cargos = viewModel.listarCargos(membros)
 
     fun tarefasAtivasDoMembro(idMembro: Int): Int {
-        return tarefas.contarComListaDinamica { it.idMembro == idMembro && it.status == "Em_Andamento" }
+        return viewModel.contarTarefasEmAndamento(tarefas, idMembro)
     }
 
-    val membrosFiltrados = membros
-        .filtrarComListaDinamica { membro ->
-            val tarefasAtivas = tarefasAtivasDoMembro(membro.idMembro)
-            val passaBusca = termoBusca.isBlank() ||
-                    membro.idMembro.toString().contains(termoBusca) ||
-                    membro.nome.orEmpty().normalizarBusca().contains(termoBusca) ||
-                    membro.cargo.orEmpty().normalizarBusca().contains(termoBusca) ||
-                    membro.email.orEmpty().normalizarBusca().contains(termoBusca)
-            val passaCargo = filtroCargo == "Todos" || membro.cargo.orEmpty() == filtroCargo
-            val passaCarga = when (filtroCarga) {
-                "Disponíveis" -> tarefasAtivas < 3
-                "Com tarefas" -> tarefasAtivas > 0
-                "No limite" -> tarefasAtivas >= 3
-                else -> true
-            }
-
-            passaBusca && passaCargo && passaCarga
-        }
-        .sortedBy { it.nome.lowercase() }
+    val membrosFiltrados = viewModel.filtrarMembros(membros, tarefas, pesquisa, filtroCargo, filtroCarga)
 
     Scaffold(
         topBar = {
