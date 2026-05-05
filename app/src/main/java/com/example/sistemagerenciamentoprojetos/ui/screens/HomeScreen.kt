@@ -109,7 +109,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Bem vindo, João",
+                            text = "Bem-vindo, usuario",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF1A1A1A)
