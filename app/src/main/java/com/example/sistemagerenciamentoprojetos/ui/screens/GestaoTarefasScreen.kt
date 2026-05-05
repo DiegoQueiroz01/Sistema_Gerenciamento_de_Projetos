@@ -26,12 +26,55 @@ import kotlinx.coroutines.launch
 fun GestaoTarefasScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCadastro: () -> Unit,
-    onNavigateToDetalhe: (Int) -> Unit,   // <-- adicionar isso
-    viewModel: TarefaViewModel = viewModel()
+    onNavigateToDetalhe: (Int) -> Unit,
+    viewModel: TarefaViewModel = viewModel(),
+    projetosViewModel: ProjetosViewModel = viewModel(),
+    membrosViewModel: MembrosViewModel = viewModel()
 ) {
     val tarefas by viewModel.tarefas.collectAsState()
-    val tarefasOrdenadas = viewModel.ordenar(tarefas)
+    val projetos by projetosViewModel.projetos.collectAsState()
+    val membros by membrosViewModel.membros.collectAsState()
+    var pesquisa by remember { mutableStateOf("") }
+    var filtroPrioridade by remember { mutableStateOf("Todas") }
+    var filtroStatus by remember { mutableStateOf("Todos") }
+    var filtroProjetoId by remember { mutableStateOf(0) }
+    var filtroMembroId by remember { mutableStateOf(0) }
+    var ordenacao by remember { mutableStateOf("Prazo") }
     val scope = rememberCoroutineScope()
+    val agora = System.currentTimeMillis()
+
+    fun nomeProjeto(id: Int): String = projetos.firstOrNull { it.idProjeto == id }?.nome ?: "Projeto $id"
+    fun nomeMembro(id: Int): String = membros.firstOrNull { it.idMembro == id }?.nome ?: ""
+
+    val tarefasFiltradas = tarefas
+        .filtrarComListaDinamica { tarefa ->
+            pesquisa.isBlank() ||
+                    tarefa.idTarefa.toString().contains(pesquisa) ||
+                    tarefa.titulo.contains(pesquisa, ignoreCase = true) ||
+                    tarefa.descricao.contains(pesquisa, ignoreCase = true) ||
+                    nomeProjeto(tarefa.idProjeto).contains(pesquisa, ignoreCase = true) ||
+                    nomeMembro(tarefa.idMembro).contains(pesquisa, ignoreCase = true)
+        }
+        .filtrarComListaDinamica { filtroPrioridade == "Todas" || it.prioridade == filtroPrioridade }
+        .filtrarComListaDinamica {
+            when (filtroStatus) {
+                "Não iniciada" -> it.status == "Nao_Iniciada"
+                "Em andamento" -> it.status == "Em_Andamento"
+                "Concluída" -> it.status == "Concluida"
+                "Atrasadas" -> it.status != "Concluida" && it.prazo < agora
+                else -> true
+            }
+        }
+        .filtrarComListaDinamica { filtroProjetoId == 0 || it.idProjeto == filtroProjetoId }
+        .filtrarComListaDinamica { filtroMembroId == 0 || it.idMembro == filtroMembroId }
+        .let { lista ->
+            when (ordenacao) {
+                "Prioridade" -> viewModel.ordenar(lista)
+                "Projeto" -> lista.sortedWith(compareBy({ nomeProjeto(it.idProjeto) }, { it.prazo }))
+                "Responsável" -> lista.sortedWith(compareBy({ nomeMembro(it.idMembro) }, { it.prazo }))
+                else -> lista.sortedBy { it.prazo }
+            }
+        }
 
     Scaffold(
         topBar = {
@@ -77,23 +120,78 @@ fun GestaoTarefasScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.FilterList, contentDescription = null)
-                Text(
-                    " FILTRAR POR: PROJETO",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.FilterList, contentDescription = null)
+                    Text(
+                        " FILTRAR POR:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextField(
+                        value = pesquisa,
+                        onValueChange = { pesquisa = it },
+                        placeholder = { Text("Pesquisar...") },
+                        modifier = Modifier.height(48.dp).width(170.dp),
+                        trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Gray,
+                            unfocusedIndicatorColor = Color.LightGray
+                        )
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    TaskFilterMenu("Prioridade", filtroPrioridade, listOf("Todas", "Alta", "Media", "Baixa"), Modifier.weight(1f)) {
+                        filtroPrioridade = it
+                    }
+                    TaskFilterMenu("Status", filtroStatus, listOf("Todos", "Não iniciada", "Em andamento", "Concluída", "Atrasadas"), Modifier.weight(1f)) {
+                        filtroStatus = it
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    TaskFilterMenu(
+                        label = "Projeto",
+                        value = if (filtroProjetoId == 0) "Todos" else nomeProjeto(filtroProjetoId),
+                        options = listOf("Todos") + projetos.map { it.nome },
+                        modifier = Modifier.weight(1f)
+                    ) { escolhido ->
+                        filtroProjetoId = projetos.firstOrNull { it.nome == escolhido }?.idProjeto ?: 0
+                    }
+                    TaskFilterMenu(
+                        label = "Responsável",
+                        value = if (filtroMembroId == 0) "Todos" else nomeMembro(filtroMembroId),
+                        options = listOf("Todos") + membros.map { it.nome },
+                        modifier = Modifier.weight(1f)
+                    ) { escolhido ->
+                        filtroMembroId = membros.firstOrNull { it.nome == escolhido }?.idMembro ?: 0
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("↑ ORDENAR POR: PRAZO", fontSize = 10.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("↑ ORDENAR POR:", fontSize = 10.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.width(8.dp))
+                listOf("Prazo", "Prioridade", "Projeto", "Responsável").forEach { opcao ->
+                    FilterChip(
+                        selected = ordenacao == opcao,
+                        onClick = { ordenacao = opcao },
+                        label = { Text(opcao, fontSize = 11.sp) },
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (tarefasOrdenadas.isEmpty()) {
+            if (tarefasFiltradas.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -105,7 +203,7 @@ fun GestaoTarefasScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(tarefasOrdenadas) { tarefa ->
+                    items(tarefasFiltradas) { tarefa ->
                         TarefaCard(
                             tarefa = tarefa,
                             onClick = {onNavigateToDetalhe(tarefa.idTarefa)},
@@ -117,6 +215,49 @@ fun GestaoTarefasScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TaskFilterMenu(
+    label: String,
+    value: String,
+    options: List<String>,
+    modifier: Modifier = Modifier,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        TextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label, fontSize = 11.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.LightGray,
+                unfocusedIndicatorColor = Color.LightGray
+            )
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -150,7 +291,11 @@ fun TarefaCard(tarefa: Tarefa, onClick: () -> Unit, onDeletar: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = if (tarefa.status == "Concluida") 1f else 0.5f,
+                    progress = when (tarefa.status) {
+                        "Concluida" -> 1f
+                        "Em_Andamento" -> 0.5f
+                        else -> 0f
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp)

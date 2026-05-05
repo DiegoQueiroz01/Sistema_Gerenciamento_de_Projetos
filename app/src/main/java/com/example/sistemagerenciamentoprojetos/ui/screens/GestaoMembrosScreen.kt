@@ -33,9 +33,21 @@ fun GestaoMembrosScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCadastro: () -> Unit,
     onNavigateToDetalhes: (Int) -> Unit,
-    viewModel: MembrosViewModel = viewModel()
+    viewModel: MembrosViewModel = viewModel(),
+    tarefaViewModel: TarefaViewModel = viewModel()
 ) {
     val membros by viewModel.membros.collectAsState()
+    val tarefas by tarefaViewModel.tarefas.collectAsState()
+    var pesquisa by remember { mutableStateOf("") }
+    val membrosFiltrados = membros
+        .filtrarComListaDinamica {
+            pesquisa.isBlank() ||
+                    it.idMembro.toString().contains(pesquisa) ||
+                    it.nome.contains(pesquisa, ignoreCase = true) ||
+                    it.cargo.contains(pesquisa, ignoreCase = true) ||
+                    it.email.contains(pesquisa, ignoreCase = true)
+        }
+        .sortedBy { it.nome.lowercase() }
 
     Scaffold(
         topBar = {
@@ -97,8 +109,8 @@ fun GestaoMembrosScreen(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 TextField(
-                    value = "",
-                    onValueChange = {},
+                    value = pesquisa,
+                    onValueChange = { pesquisa = it },
                     placeholder = { Text("Pesquisar...") },
                     modifier = Modifier.height(48.dp).width(150.dp),
                     trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
@@ -118,8 +130,13 @@ fun GestaoMembrosScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                items(membros) { membro ->
-                    MembroCard(membro = membro, onClick = { onNavigateToDetalhes(membro.idMembro) })
+                items(membrosFiltrados) { membro ->
+                    val ativas = tarefas.contarComListaDinamica { it.idMembro == membro.idMembro && it.status == "Em_Andamento" }
+                    MembroCard(
+                        membro = membro,
+                        tarefasAtivas = ativas,
+                        onClick = { onNavigateToDetalhes(membro.idMembro) }
+                    )
                 }
             }
         }
@@ -127,10 +144,10 @@ fun GestaoMembrosScreen(
 }
 
 @Composable
-fun MembroCard(membro: Membro, onClick: () -> Unit) {
+fun MembroCard(membro: Membro, tarefasAtivas: Int = membro.tarefasAtivas, onClick: () -> Unit) {
     val maxTarefas = 3
-    val progress = (membro.tarefasAtivas.toFloat() / maxTarefas).coerceAtMost(1f)
-    val isFull = membro.tarefasAtivas >= maxTarefas
+    val progress = (tarefasAtivas.toFloat() / maxTarefas).coerceAtMost(1f)
+    val isFull = tarefasAtivas >= maxTarefas
 
     Card(
         modifier = Modifier
@@ -205,7 +222,7 @@ fun MembroCard(membro: Membro, onClick: () -> Unit) {
                 Text("ATIVAS", fontSize = 10.sp, color = Color.Gray)
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = "${membro.tarefasAtivas}",
+                        text = "$tarefasAtivas",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )

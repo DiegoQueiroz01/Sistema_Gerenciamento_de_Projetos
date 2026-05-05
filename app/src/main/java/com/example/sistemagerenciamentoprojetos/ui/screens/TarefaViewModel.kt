@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import com.example.sistemagerenciamentoprojetos.domain.membros.Membro
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 
 class TarefaViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -61,6 +61,30 @@ class TarefaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    suspend fun atualizar(
+        idTarefa: Int,
+        idProjeto: Int,
+        titulo: String,
+        descricao: String,
+        prioridade: String,
+        prazo: Long,
+        tempoEstimado: Float,
+        idMembro: Int
+    ): String {
+        return withContext(Dispatchers.IO) {
+            tarefaService.atualizarTarefa(
+                idTarefa, idProjeto, titulo, descricao,
+                prioridade, prazo, tempoEstimado, idMembro
+            )
+        }
+    }
+
+    suspend fun registrarTempoEfetivo(idTarefa: Int, tempoEfetivo: Float): String {
+        return withContext(Dispatchers.IO) {
+            tarefaService.registrarTempoEfetivo(idTarefa, tempoEfetivo)
+        }
+    }
+
     suspend fun getTarefaById(id: Int): Tarefa? {
         return withContext(Dispatchers.IO) {
             tarefaDao.buscarPorId(id)
@@ -73,6 +97,12 @@ class TarefaViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun ordenar(lista: List<Tarefa>): List<Tarefa> {
         return tarefaService.ordenarTarefas(lista)
+    }
+    fun tarefasDoProjeto(idProjeto: Int): Flow<List<Tarefa>> {
+        return tarefaDao.listarPorProjeto(idProjeto)
+    }
+    fun tarefasDoMembro(idMembro: Int): Flow<List<Tarefa>> {
+        return tarefaDao.listarPorMembro(idMembro)
     }
     suspend fun atribuirMembro(idTarefa: Int, idMembro: Int): String {
         return withContext(Dispatchers.IO) {

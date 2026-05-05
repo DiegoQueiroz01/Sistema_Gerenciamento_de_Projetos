@@ -27,4 +27,33 @@ class MembrosViewModel(application: Application) : AndroidViewModel(application)
             membroDao.buscarPorId(id)
         }
     }
+
+    suspend fun atualizar(idMembro: Int, nome: String, cargo: String, email: String): String {
+        return withContext(Dispatchers.IO) {
+            val membro = membroDao.buscarPorId(idMembro) ?: return@withContext "Erro: Membro não encontrado."
+
+            if (nome.isBlank() || cargo.isBlank() || email.isBlank()) {
+                return@withContext "Todos os campos são obrigatórios."
+            }
+
+            val emailNormalizado = email.trim().lowercase()
+            if (membroDao.contarEmailExceto(emailNormalizado, idMembro) > 0) {
+                return@withContext "Erro: Já existe um membro cadastrado com este e-mail."
+            }
+
+            membro.nome = nome.trim()
+            membro.cargo = cargo.trim()
+            membro.email = emailNormalizado
+            membroDao.atualizar(membro)
+            "Membro atualizado com sucesso!"
+        }
+    }
+
+    suspend fun deletar(idMembro: Int) {
+        withContext(Dispatchers.IO) {
+            db.tarefaDao().removerResponsavel(idMembro)
+            db.projetoDao().desvincularMembroDeTodosProjetos(idMembro)
+            membroDao.deletar(idMembro)
+        }
+    }
 }

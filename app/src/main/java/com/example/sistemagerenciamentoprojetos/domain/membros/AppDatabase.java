@@ -8,9 +8,12 @@ import androidx.room.RoomDatabase;
 
 import com.example.sistemagerenciamentoprojetos.domain.tarefas.Tarefa;
 import com.example.sistemagerenciamentoprojetos.domain.tarefas.TarefaDao;
+import com.example.sistemagerenciamentoprojetos.domain.projetos.Projeto;
+import com.example.sistemagerenciamentoprojetos.domain.projetos.ProjetoDao;
+import com.example.sistemagerenciamentoprojetos.domain.projetos.ProjetoMembro;
 
 
-@Database(entities = {Membro.class, Tarefa.class}, version = 3)
+@Database(entities = {Membro.class, Tarefa.class, Projeto.class, ProjetoMembro.class}, version = 5)
 public abstract class AppDatabase extends RoomDatabase {
 
     private static AppDatabase instance;
@@ -18,6 +21,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract MembroDao membroDao();
     public abstract TarefaDao tarefaDao();
+    public abstract ProjetoDao projetoDao();
 
     public static synchronized AppDatabase getInstance(Context context) {
         if (instance == null) {

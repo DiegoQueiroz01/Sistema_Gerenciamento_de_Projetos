@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sistemagerenciamentoprojetos.domain.membros.Membro
+import com.example.sistemagerenciamentoprojetos.domain.projetos.Projeto
 import com.example.sistemagerenciamentoprojetos.domain.tarefas.Tarefa
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -34,15 +35,20 @@ private val FundoCinza = Color(0xFFF2F2F2)
 fun TaskDetailScreen(
     tarefaId: Int,
     onNavigateBack: () -> Unit,
+    onNavigateToEditar: (Int) -> Unit,
     tarefaViewModel: TarefaViewModel = viewModel(),
-    membrosViewModel: MembrosViewModel = viewModel()
+    membrosViewModel: MembrosViewModel = viewModel(),
+    projetosViewModel: ProjetosViewModel = viewModel()
 ) {
     var tarefa by remember { mutableStateOf<Tarefa?>(null) }
+    var projeto by remember { mutableStateOf<Projeto?>(null) }
 
     // PASSO 1 — Declara o estado que vai armazenar o membro responsável
     var membro by remember { mutableStateOf<Membro?>(null) }
 
     var mensagemSnackbar by remember { mutableStateOf<String?>(null) }
+    var tempoEfetivoTexto by remember { mutableStateOf("") }
+    val todasTarefas by tarefaViewModel.tarefas.collectAsState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale("pt", "BR")) }
@@ -51,8 +57,12 @@ fun TaskDetailScreen(
     LaunchedEffect(tarefaId) {
         tarefa = tarefaViewModel.getTarefaById(tarefaId)
         tarefa?.let { t ->
+            projeto = projetosViewModel.getProjetoById(t.idProjeto)
+            tempoEfetivoTexto = t.tempoEfetivo.toString()
             if (t.idMembro != 0) {                                   // 0 = sem responsável
                 membro = membrosViewModel.getMembroById(t.idMembro)  // consulta Room via coroutine
+            } else {
+                membro = null
             }
         }
     }
@@ -83,7 +93,7 @@ fun TaskDetailScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { /* TODO: editar */ }) {
+                    TextButton(onClick = { onNavigateToEditar(tarefaId) }) {
                         Text("Editar", color = Verde, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                     }
                 }
@@ -158,6 +168,37 @@ fun TaskDetailScreen(
                             CaixaTempo("EFETIVO", efetivTexto, Modifier.weight(1f))
                             CaixaTempo("RESTANTE", "~${restante.toInt()}h", Modifier.weight(1f))
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = tempoEfetivoTexto,
+                                onValueChange = { tempoEfetivoTexto = it },
+                                label = { Text("Tempo efetivo (h)") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        val resultado = tarefaViewModel.registrarTempoEfetivo(
+                                            t.idTarefa,
+                                            tempoEfetivoTexto.toFloatOrNull() ?: 0f
+                                        )
+                                        tarefa = tarefaViewModel.getTarefaById(t.idTarefa)
+                                        mensagemSnackbar = resultado
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Verde)
+                            ) {
+                                Text("Salvar")
+                            }
+                        }
                     }
                 }
 
@@ -208,8 +249,11 @@ fun TaskDetailScreen(
                                     shape = RoundedCornerShape(20.dp),
                                     color = Color(0xFFFFF0E0)
                                 ) {
+                                    val tarefasAtivasMembro = todasTarefas.contarComListaDinamica {
+                                        it.idMembro == membro!!.idMembro && it.status == "Em_Andamento"
+                                    }
                                     Text(
-                                        text = "${membro!!.tarefasAtivas} / 3",
+                                        text = "$tarefasAtivasMembro / 3",
                                         color = Color(0xFFF57C00),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp,
@@ -252,7 +296,7 @@ fun TaskDetailScreen(
                         Divider(color = Color(0xFFEEEEEE))
                         InfoLinha(
                             label = "Projeto",
-                            valor = "Projeto ${t.idProjeto}",
+                            valor = projeto?.nome ?: "Projeto ${t.idProjeto}",
                             valorColor = Verde
                         )
                     }
@@ -265,6 +309,26 @@ fun TaskDetailScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val resultado = tarefaViewModel.atualizarStatus(t.idTarefa, "Em_Andamento")
+                                tarefa = tarefaViewModel.getTarefaById(t.idTarefa)
+                                mensagemSnackbar = resultado
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
+                        enabled = t.status == "Nao_Iniciada"
+                    ) {
+                        Text(
+                            text = if (t.status == "Em_Andamento") "Tarefa em andamento" else "Iniciar tarefa",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
+                        )
+                    }
+
                     Button(
                         onClick = {
                             scope.launch {

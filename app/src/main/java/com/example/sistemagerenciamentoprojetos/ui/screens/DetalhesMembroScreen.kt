@@ -2,8 +2,10 @@ package com.example.sistemagerenciamentoprojetos.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
@@ -18,25 +20,42 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sistemagerenciamentoprojetos.domain.membros.Membro
+import com.example.sistemagerenciamentoprojetos.domain.tarefas.Tarefa
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalhesMembroScreen(
     membroId: Int,
     onNavigateBack: () -> Unit,
-    viewModel: MembrosViewModel = viewModel()
+    viewModel: MembrosViewModel = viewModel(),
+    tarefaViewModel: TarefaViewModel = viewModel()
 ) {
     var membro by remember { mutableStateOf<Membro?>(null) }
+    var editando by remember { mutableStateOf(false) }
+    var nome by remember { mutableStateOf("") }
+    var cargo by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var mensagem by remember { mutableStateOf("") }
+    val tarefas by tarefaViewModel.tarefasDoMembro(membroId).collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     LaunchedEffect(membroId) {
         membro = viewModel.getMembroById(membroId)
+        membro?.let {
+            nome = it.nome
+            cargo = it.cargo
+            email = it.email
+        }
     }
 
     Scaffold(
@@ -47,18 +66,28 @@ fun DetalhesMembroScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
                     }
+                },
+                actions = {
+                    TextButton(onClick = { editando = !editando }) {
+                        Text(if (editando) "Cancelar" else "Editar", color = Color(0xFF0F9D58))
+                    }
                 }
             )
         }
     ) { paddingValues ->
         membro?.let { m ->
+            val tarefasAtivas = tarefas.contarComListaDinamica { it.status == "Em_Andamento" }
+            val tarefasConcluidas = tarefas.contarComListaDinamica { it.status == "Concluida" }
+            val tarefasPendentes = tarefas.filtrarComListaDinamica { it.status != "Concluida" }
+            val historico = tarefas.filtrarComListaDinamica { it.status == "Concluida" }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                // Header com Avatar e Nome
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 24.dp)
@@ -79,39 +108,120 @@ fun DetalhesMembroScreen(
                     }
                 }
 
+                if (editando) {
+                    MembroEditForm(
+                        nome = nome,
+                        onNomeChange = { nome = it },
+                        cargo = cargo,
+                        onCargoChange = { cargo = it },
+                        email = email,
+                        onEmailChange = { email = it },
+                        mensagem = mensagem,
+                        onSalvar = {
+                            scope.launch {
+                                mensagem = viewModel.atualizar(membroId, nome, cargo, email)
+                                membro = viewModel.getMembroById(membroId)
+                                editando = mensagem.contains("sucesso")
+                            }
+                        },
+                        onDeletar = {
+                            scope.launch {
+                                viewModel.deletar(membroId)
+                                onNavigateBack()
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
                 Divider(modifier = Modifier.padding(bottom = 24.dp))
 
-                // Informações Detalhadas
                 InfoRow(icon = Icons.Default.Email, label = "E-mail", value = m.email)
                 InfoRow(icon = Icons.Default.Work, label = "Cargo", value = m.cargo)
                 InfoRow(icon = Icons.Default.Event, label = "Membro desde", value = dateFormat.format(Date(m.dataCadastro)))
 
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Estatísticas", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 12.dp))
+                Text("Carga de Trabalho", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 12.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatCard(label = "Tarefas Concluídas", value = "${m.tarefasConcluidas}", modifier = Modifier.weight(1f))
-                    StatCard(label = "Tarefas Ativas", value = "${m.tarefasAtivas}", modifier = Modifier.weight(1f))
+                    StatCard(label = "Concluídas", value = "$tarefasConcluidas", modifier = Modifier.weight(1f))
+                    StatCard(label = "Em Andamento", value = "$tarefasAtivas/3", modifier = Modifier.weight(1f))
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+                LinearProgressIndicator(
+                    progress = (tarefasAtivas.toFloat() / 3f).coerceIn(0f, 1f),
+                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                    color = if (tarefasAtivas >= 3) Color.Red else Color(0xFF0F9D58),
+                    trackColor = Color(0xFFEEEEEE)
+                )
+
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Projetos Participados", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
-                
-                // Placeholder para projetos
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-                ) {
-                    Text(
-                        "Nenhum projeto registrado ainda.",
-                        modifier = Modifier.padding(16.dp),
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
+                Text("Tarefas em andamento", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
+                if (tarefasPendentes.isEmpty()) {
+                    EmptyMemberCard("Nenhuma tarefa pendente para este membro.")
+                } else {
+                    tarefasPendentes.forEach { tarefa ->
+                        MemberTaskCard(tarefa = tarefa, dateFormat = dateFormat)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Histórico de entregas", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
+                if (historico.isEmpty()) {
+                    EmptyMemberCard("Nenhuma tarefa concluída ainda.")
+                } else {
+                    historico.forEach { tarefa ->
+                        MemberTaskCard(tarefa = tarefa, dateFormat = dateFormat, mostrarComparativo = true)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+private fun MembroEditForm(
+    nome: String,
+    onNomeChange: (String) -> Unit,
+    cargo: String,
+    onCargoChange: (String) -> Unit,
+    email: String,
+    onEmailChange: (String) -> Unit,
+    mensagem: String,
+    onSalvar: () -> Unit,
+    onDeletar: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(value = nome, onValueChange = onNomeChange, label = { Text("Nome") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = cargo, onValueChange = onCargoChange, label = { Text("Cargo") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = email, onValueChange = onEmailChange, label = { Text("E-mail") }, modifier = Modifier.fillMaxWidth())
+            if (mensagem.isNotEmpty()) {
+                Text(mensagem, color = if (mensagem.contains("Erro")) Color.Red else Color(0xFF0F9D58), fontSize = 12.sp)
+            }
+            Button(
+                onClick = onSalvar,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F9D58))
+            ) {
+                Text("Salvar alterações")
+            }
+            OutlinedButton(
+                onClick = onDeletar,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+            ) {
+                Text("Remover membro")
+            }
         }
     }
 }
@@ -145,5 +255,46 @@ fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
             Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
             Text(label, fontSize = 12.sp, color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
+    }
+}
+
+@Composable
+private fun MemberTaskCard(
+    tarefa: Tarefa,
+    dateFormat: SimpleDateFormat,
+    mostrarComparativo: Boolean = false
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(tarefa.titulo, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Prazo: ${dateFormat.format(Date(tarefa.prazo))}", fontSize = 12.sp, color = Color.Gray)
+                }
+                BadgeStatus(tarefa.status)
+            }
+            if (mostrarComparativo) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Estimado: ${tarefa.tempoEstimado}h • Efetivo: ${tarefa.tempoEfetivo}h",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyMemberCard(text: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+    ) {
+        Text(text, modifier = Modifier.padding(16.dp), color = Color.Gray, fontSize = 14.sp)
     }
 }
