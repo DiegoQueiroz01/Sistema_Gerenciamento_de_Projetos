@@ -39,13 +39,36 @@ fun GestaoMembrosScreen(
     val membros by viewModel.membros.collectAsState()
     val tarefas by tarefaViewModel.tarefas.collectAsState()
     var pesquisa by remember { mutableStateOf("") }
+    var filtroCargo by remember { mutableStateOf("Todos") }
+    var filtroCarga by remember { mutableStateOf("Todos") }
+    val termoBusca = pesquisa.normalizarBusca()
+    val cargos = listOf("Todos") + membros
+        .map { it.cargo.orEmpty() }
+        .filtrarComListaDinamica { it.isNotBlank() }
+        .distinct()
+        .sortedBy { it.normalizarBusca() }
+
+    fun tarefasAtivasDoMembro(idMembro: Int): Int {
+        return tarefas.contarComListaDinamica { it.idMembro == idMembro && it.status == "Em_Andamento" }
+    }
+
     val membrosFiltrados = membros
-        .filtrarComListaDinamica {
-            pesquisa.isBlank() ||
-                    it.idMembro.toString().contains(pesquisa) ||
-                    it.nome.contains(pesquisa, ignoreCase = true) ||
-                    it.cargo.contains(pesquisa, ignoreCase = true) ||
-                    it.email.contains(pesquisa, ignoreCase = true)
+        .filtrarComListaDinamica { membro ->
+            val tarefasAtivas = tarefasAtivasDoMembro(membro.idMembro)
+            val passaBusca = termoBusca.isBlank() ||
+                    membro.idMembro.toString().contains(termoBusca) ||
+                    membro.nome.orEmpty().normalizarBusca().contains(termoBusca) ||
+                    membro.cargo.orEmpty().normalizarBusca().contains(termoBusca) ||
+                    membro.email.orEmpty().normalizarBusca().contains(termoBusca)
+            val passaCargo = filtroCargo == "Todos" || membro.cargo.orEmpty() == filtroCargo
+            val passaCarga = when (filtroCarga) {
+                "Disponíveis" -> tarefasAtivas < 3
+                "Com tarefas" -> tarefasAtivas > 0
+                "No limite" -> tarefasAtivas >= 3
+                else -> true
+            }
+
+            passaBusca && passaCargo && passaCarga
         }
         .sortedBy { it.nome.lowercase() }
 
@@ -122,22 +145,92 @@ fun GestaoMembrosScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                MemberFilterMenu(
+                    label = "Cargo",
+                    value = filtroCargo,
+                    options = cargos,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    filtroCargo = it
+                }
+                MemberFilterMenu(
+                    label = "Carga",
+                    value = filtroCarga,
+                    options = listOf("Todos", "Disponíveis", "Com tarefas", "No limite"),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    filtroCarga = it
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             Text("↑ ORDENAR POR: A-Z", fontSize = 10.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(membrosFiltrados) { membro ->
-                    val ativas = tarefas.contarComListaDinamica { it.idMembro == membro.idMembro && it.status == "Em_Andamento" }
-                    MembroCard(
-                        membro = membro,
-                        tarefasAtivas = ativas,
-                        onClick = { onNavigateToDetalhes(membro.idMembro) }
-                    )
+            if (membrosFiltrados.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Nenhum membro encontrado.", color = Color.Gray)
                 }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(membrosFiltrados) { membro ->
+                        val ativas = tarefasAtivasDoMembro(membro.idMembro)
+                        MembroCard(
+                            membro = membro,
+                            tarefasAtivas = ativas,
+                            onClick = { onNavigateToDetalhes(membro.idMembro) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MemberFilterMenu(
+    label: String,
+    value: String,
+    options: List<String>,
+    modifier: Modifier = Modifier,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        TextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label, fontSize = 11.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Gray,
+                unfocusedIndicatorColor = Color.LightGray
+            )
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
             }
         }
     }

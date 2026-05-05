@@ -41,13 +41,26 @@ fun GestaoProjetosScreen(
 ) {
     val projetos by viewModel.projetosResumo.collectAsState()
     var pesquisa by remember { mutableStateOf("") }
+    var filtroSituacao by remember { mutableStateOf("Todos") }
+    val termoBusca = pesquisa.normalizarBusca()
 
     val projetosOrdenados = viewModel.ordenarPorPrioridade(projetos)
-        .filtrarComListaDinamica {
-            pesquisa.isBlank() ||
-                    it.idProjeto.toString().contains(pesquisa) ||
-                    it.nome.contains(pesquisa, ignoreCase = true) ||
-                    it.descricao.contains(pesquisa, ignoreCase = true)
+        .filtrarComListaDinamica { projeto ->
+            val concluido = projeto.totalTarefas > 0 && projeto.tarefasConcluidas == projeto.totalTarefas
+            val limiteCheio = projeto.limiteTarefas > 0 && projeto.tarefasAtivas >= projeto.limiteTarefas
+            val passaBusca = termoBusca.isBlank() ||
+                    projeto.idProjeto.toString().contains(termoBusca) ||
+                    projeto.nome.orEmpty().normalizarBusca().contains(termoBusca) ||
+                    projeto.descricao.orEmpty().normalizarBusca().contains(termoBusca)
+            val passaSituacao = when (filtroSituacao) {
+                "Atrasados" -> projeto.tarefasAtrasadas > 0
+                "No limite" -> limiteCheio
+                "Em andamento" -> projeto.tarefasEmAndamento > 0
+                "Concluídos" -> concluido
+                else -> true
+            }
+
+            passaBusca && passaSituacao
         }
 
     Scaffold(
@@ -123,6 +136,16 @@ fun GestaoProjetosScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            ProjectFilterMenu(
+                label = "Situação",
+                value = filtroSituacao,
+                options = listOf("Todos", "Atrasados", "No limite", "Em andamento", "Concluídos"),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                filtroSituacao = it
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             Text("↑ ORDENAR POR: PRIORIDADE E PRAZO", fontSize = 10.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(8.dp))
@@ -132,7 +155,7 @@ fun GestaoProjetosScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Nenhum projeto cadastrado.", color = Color.Gray)
+                    Text("Nenhum projeto encontrado.", color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -146,6 +169,50 @@ fun GestaoProjetosScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProjectFilterMenu(
+    label: String,
+    value: String,
+    options: List<String>,
+    modifier: Modifier = Modifier,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        TextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label, fontSize = 11.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Gray,
+                unfocusedIndicatorColor = Color.LightGray
+            )
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
             }
         }
     }

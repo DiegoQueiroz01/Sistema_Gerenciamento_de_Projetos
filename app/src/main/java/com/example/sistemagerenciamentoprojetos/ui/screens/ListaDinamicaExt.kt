@@ -1,6 +1,9 @@
 package com.example.sistemagerenciamentoprojetos.ui.screens
 
+import java.text.Normalizer
 import repository.dinamicas.lista.ListaDinamica
+
+private val marcasAcentoRegex = "\\p{Mn}+".toRegex()
 
 fun <T> List<T>.paraListaDinamica(): ListaDinamica {
     val lista = ListaDinamica(size.coerceAtLeast(1))
@@ -51,4 +54,11 @@ private fun <T> ListaDinamica.paraListaKotlin(): List<T> {
     }
 
     return lista
+}
+
+fun String.normalizarBusca(): String {
+    return Normalizer
+        .normalize(trim(), Normalizer.Form.NFD)
+        .replace(marcasAcentoRegex, "")
+        .lowercase()
 }
